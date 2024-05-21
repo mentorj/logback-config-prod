@@ -1,0 +1,30 @@
+<configuration debug="true" scan="true" scanPeriod="30 seconds" >
+    <turboFilter class="ch.qos.logback.classic.turbo.DuplicateMessageFilter"/>
+    <appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logback.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>/tmp/logback.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy
+                    class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>50MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <!-- encodder limit the size of the message up to 512 characters -->
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} -   %.-512msg%n</pattern>
+            <outputPatternAsHeader>true</outputPatternAsHeader>
+        </encoder>
+    </appender>
+
+    <appender name="ASYNC_FILE"
+              class="ch.qos.logback.classic.AsyncAppender">
+        <discardingThreshold>0</discardingThreshold> <!-- default 20, means drop lower event when has 20% capacity remaining -->
+        <appender-ref ref="file" />
+        <queueSize>1</queueSize> <!-- default 256 -->
+        <includeCallerData>false</includeCallerData><!-- default false -->
+        <neverBlock>false</neverBlock><!-- default false, set to true to cause
+            the Appender not block the application and just drop the messages -->
+    </appender>
+
+</configuration>
