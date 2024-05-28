@@ -1,9 +1,21 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<configuration>
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-    </appender>
+<configuration debug="true">
+  <!--  <turbofilter class="ch.qos.logback.classic.turbo.DuplicateMessageFilter">
+            <allowedRepetitions>4</allowedRepetitions>
+            <cacheSize>30</cacheSize>
+    </turbofilter>
+    -->
+    <conversionRule conversionWord="bounded"
+                    converterClass="com.javaxpert.logging.unittetsing.TruncareMessageConverter" />
 
-    <root level="error">
-        <appender-ref ref="CONSOLE"/>
-    </root>
+    <appender name="File" class="ch.qos.logback.core.FileAppender">
+    <encoder>
+        <pattern>%-12date{YYYY-MM-dd HH:mm:ss.SSS} %-5level – %bounded{80}%n</pattern>
+    </encoder>
+    <file>log-test.log</file>
+    <append>true</append>
+</appender>
+
+<logger name="fileLogger" level="INFO" additivity="false">
+<appender-ref ref="File" />
+</logger>
 </configuration>
