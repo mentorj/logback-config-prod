@@ -8,6 +8,7 @@ import ch.qos.logback.classic.encoder.JsonEncoder;
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.turbo.DuplicateMessageFilter;
 import ch.qos.logback.core.FileAppender;
+import net.logstash.logback.encoder.LogstashEncoder;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
@@ -86,5 +87,86 @@ public class LoggingTestsSuite {
         }
         assertThat(allLogEntries.size()).isLessThan(10);
         assertThat(allLogEntries.size()).isEqualTo(5);
+    }
+
+
+    @Test
+    void largeMessagesShouldBeTruncated_ProgrammaticConfig(){
+        Logger logger = (Logger) LoggerFactory.getLogger(LoggingTestsSuite.class);
+        LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
+
+        PatternLayoutEncoder logEncoder = new PatternLayoutEncoder();
+        logEncoder.setContext(ctx);
+        logEncoder.setPattern("%-12date{YYYY-MM-dd HH:mm:ss.SSS} %-5level – %.-128msg%n");//here is the trick!!
+        logEncoder.start();
+
+        FileAppender fileAppender = new FileAppender<>();
+        fileAppender.setFile("log-test-truncated-msg.log");
+        fileAppender.setContext(ctx);
+        fileAppender.setAppend(false);
+        fileAppender.setEncoder(logEncoder);
+        fileAppender.start();
+        logger.setLevel(Level.INFO);
+        logger.addAppender(fileAppender);
+        logger.setAdditive(false);
+        StringBuffer buffer = new StringBuffer();
+        for(int i=0;i<1000;i++){
+            buffer.append("Useless trace again");
+        }
+        logger.info(buffer.toString());
+
+        Path traceFilePath = Paths.get("log-test-truncated-msg.log");
+        List<String> allLogEntries =  new ArrayList<>();
+        try {
+            allLogEntries = Files.readAllLines(traceFilePath);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertThat(allLogEntries.get(0).length()).isBetween(20,200);
+    }
+
+    @Test
+    void stackTraceCanBeTruncated(){
+        Logger logger = (Logger) LoggerFactory.getLogger(LoggingTestsSuite.class);
+        LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
+
+        PatternLayoutEncoder logEncoder = new PatternLayoutEncoder();
+        logEncoder.setContext(ctx);
+        logEncoder.setPattern("%ex{3}%msg%n");//here is the trick!!
+        logEncoder.start();
+        FileAppender fileAppender = new FileAppender<>();
+        fileAppender.setFile("log-tests-stacktrace.log");
+        fileAppender.setContext(ctx);
+        fileAppender.setAppend(false);
+        fileAppender.setEncoder(logEncoder);
+        fileAppender.start();
+        logger.setLevel(Level.INFO);
+        logger.addAppender(fileAppender);
+        logger.setAdditive(false);
+
+
+        // triggers an exception
+        try{
+            var result = 256/0;
+        }catch (RuntimeException ex){
+            logger.error("Oops exploded",ex);
+        }
+
+        // asseryions
+        Path traceFilePath = Paths.get("log-tests-stacktrace.log");
+        List<String> allLogEntries =  new ArrayList<>();
+        try {
+            allLogEntries = Files.readAllLines(traceFilePath);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertThat(allLogEntries.size()).isEqualTo(5);
+        assertThat(allLogEntries.get(0)).contains("ArithmeticException");
+        assertThat(allLogEntries.get(4)).contains("exploded");
+
+
+
     }
 }
